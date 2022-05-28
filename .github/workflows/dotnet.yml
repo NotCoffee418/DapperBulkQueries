@@ -21,6 +21,8 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
+      - name: debug
+      run: ls -a
     - name: Set up environment
       run: docker-compose up -d
     - name: Test
