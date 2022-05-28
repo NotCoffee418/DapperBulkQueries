@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+
+  pgsql:
+    container_name: DapperBulkQueries.Postgres
+    image: postgres
+    environment:
+      POSTGRES_USER: "tester"
+      POSTGRES_PASSWORD: "tester"
+      POSTGRES_DB: "tester"
+    ports:
+      - "127.0.0.1:9015:5432"
+    restart: always

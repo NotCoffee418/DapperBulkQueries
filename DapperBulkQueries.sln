@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32516.85
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DapperBulkQueries", "DapperBulkQueries\DapperBulkQueries.csproj", "{FB76F5CD-2567-411C-8D15-9FDB573A3ED7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DapperBulkQueries.Tests", "DapperBulkQueries.Tests\DapperBulkQueries.Tests.csproj", "{0621C0A8-987C-4A2F-BA30-485B42E2B9D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DapperBulkQueries.Npgsql", "DapperBulkQueries.Npgsql\DapperBulkQueries.Npgsql.csproj", "{33C890BD-056B-4B1F-908E-2D3FB8733F2F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +13,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{FB76F5CD-2567-411C-8D15-9FDB573A3ED7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FB76F5CD-2567-411C-8D15-9FDB573A3ED7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FB76F5CD-2567-411C-8D15-9FDB573A3ED7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FB76F5CD-2567-411C-8D15-9FDB573A3ED7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0621C0A8-987C-4A2F-BA30-485B42E2B9D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0621C0A8-987C-4A2F-BA30-485B42E2B9D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0621C0A8-987C-4A2F-BA30-485B42E2B9D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0621C0A8-987C-4A2F-BA30-485B42E2B9D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33C890BD-056B-4B1F-908E-2D3FB8733F2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33C890BD-056B-4B1F-908E-2D3FB8733F2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33C890BD-056B-4B1F-908E-2D3FB8733F2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33C890BD-056B-4B1F-908E-2D3FB8733F2F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
