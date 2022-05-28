@@ -1,0 +1,33 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [fix-actions]
+  pull_request:
+    branches: [fix-actions]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Set up test environment
+        run: docker-compose up -d
+      - name: Test
+        run: dotnet test --no-restore --verbosity normal
+
+      - name: Pack DapperBulkQueries.Npgsql
+        run: dotnet pack --no-build --configuration Release DapperBulkQueries.Npgsql/DapperBulkQueries.Npgsql.csproj --output .
+      - name: Publish to NuGet
+        run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
