@@ -36,4 +36,24 @@ public static class BulkExtensions
         foreach ((string query, DynamicParameters parameters) in batches)
             await conn.ExecuteAsync(query, parameters);
     }
+
+    /// <summary>
+    /// Deletes multiple rows from a table by a list of values.
+    /// DELETE FROM {tableName} WHERE {columnName} IN ({selectorValues})
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="tableName"></param>
+    /// <param name="selectorColumnName"></param>
+    /// <param name="selectorValues"></param>
+    /// <returns></returns>
+    public static Task ExecuteBulkDeleteAsync<T>(
+        this NpgsqlConnection conn,
+        string tableName,
+        string selectorColumnName,
+        List<T> selectorValues)
+    {
+        (string query, DynamicParameters parameters) = QueryGenerators.GenerateBulkDelete(
+            tableName, selectorColumnName, selectorValues);
+        return conn.ExecuteAsync(query, parameters);
+    }
 }

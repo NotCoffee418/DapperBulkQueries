@@ -1,115 +1,137 @@
-﻿namespace DapperBulkQueries.Tests
+﻿namespace DapperBulkQueries.Tests;
+
+public class PostgresTests : IDisposable
 {
-    public class PostgresTests : IDisposable
+    // Setup
+    public PostgresTests()
     {
-        // Setup
-        public PostgresTests()
+        Task.Run(async () =>
         {
-            Task.Run(async () =>
-            {
-                var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
-                await conn.ExecuteAsync(@"
+            var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+            await conn.ExecuteAsync(@"
                 DROP TABLE IF EXISTS TestTable;
                 CREATE TABLE TestTable (
                     Id serial PRIMARY KEY,
                     TextCol character varying,
                     NumberCol numeric,
                     BoolCol boolean);");
-            }).Wait();            
-        }
-        
-        // Cleanup
-        public void Dispose()
+        }).Wait();            
+    }
+    
+    // Cleanup
+    public void Dispose()
+    {
+        Task.Run(async () =>
         {
-            Task.Run(async () =>
-            {
-                var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
-                await conn.ExecuteAsync(@"DROP TABLE TestTable");
-            }).Wait();
-        }
+            var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+            await conn.ExecuteAsync(@"DROP TABLE TestTable");
+        }).Wait();
+    }
 
 
-        [Fact]
-        public async Task ExecuteBulkInsertAsync_CanReturnMatchInSameSequence()
+    [Fact]
+    public async Task ExecuteBulkInsertAsync_CanReturnMatchInSameSequence()
+    {
+        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+
+        // Define properties to use
+        List<string> properties = new() { "TextCol", "NumberCol", "BoolCol" };
+
+        // Insert using the extension method
+        await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, properties);
+
+        // Retrieve the inserted data
+        var insertedData = await conn.QueryAsync<TestTable>(
+            "SELECT * FROM TestTable ORDER BY Id");
+
+        // Validate that the data matches
+        Assert.Equal(sampleData.Count, insertedData.Count());
+        for (int i = 0; i < sampleData.Count; i++)
         {
-            using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
-            List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
-
-            // Define properties to use
-            List<string> properties = new() { "TextCol", "NumberCol", "BoolCol" };
-
-            // Insert using the extension method
-            await conn.ExecuteBulkInsertAsync(
-                "TestTable", sampleData, properties);
-
-            // Retrieve the inserted data
-            var insertedData = await conn.QueryAsync<TestTable>(
-                "SELECT * FROM TestTable ORDER BY Id");
-
-            // Validate that the data matches
-            Assert.Equal(sampleData.Count, insertedData.Count());
-            for (int i = 0; i < sampleData.Count; i++)
-            {
-                Assert.Equal(sampleData[i].TextCol, insertedData.ElementAt(i).TextCol);
-                Assert.Equal(sampleData[i].NumberCol, insertedData.ElementAt(i).NumberCol);
-                Assert.Equal(sampleData[i].BoolCol, insertedData.ElementAt(i).BoolCol);
-            }
+            Assert.Equal(sampleData[i].TextCol, insertedData.ElementAt(i).TextCol);
+            Assert.Equal(sampleData[i].NumberCol, insertedData.ElementAt(i).NumberCol);
+            Assert.Equal(sampleData[i].BoolCol, insertedData.ElementAt(i).BoolCol);
         }
+    }
 
-        [Fact]
-        public async Task ExecuteBulkInsertAsync_WithCalculatedProperties_ExpectsMatchingOutput()
+    [Fact]
+    public async Task ExecuteBulkInsertAsync_WithCalculatedProperties_ExpectsMatchingOutput()
+    {
+        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+
+        // Define properties to use
+        List<string> properties = new() { "NumberCol", "BoolCol" };
+
+        // Calculated properties, make text depend on bool
+        Dictionary<string, Func<TestTable, object>> calculatedProperties = new()
         {
-            using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
-            List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+            { "TextCol", t => t.BoolCol ? "Bool is True" : "Bool is False" }
+        };
 
-            // Define properties to use
-            List<string> properties = new() { "NumberCol", "BoolCol" };
+        // Insert using the extension method
+        await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, properties, calculatedProperties);            
 
-            // Calculated properties, make text depend on bool
-            Dictionary<string, Func<TestTable, object>> calculatedProperties = new()
-            {
-                { "TextCol", t => t.BoolCol ? "Bool is True" : "Bool is False" }
-            };
+        // Retrieve the inserted data
+        var insertedData = await conn.QueryAsync<TestTable>(
+            "SELECT * FROM TestTable ORDER BY Id");
 
-            // Insert using the extension method
-            await conn.ExecuteBulkInsertAsync(
-                "TestTable", sampleData, properties, calculatedProperties);            
+        // Validate that the data matches
+        Assert.Equal(sampleData.Count, insertedData.Count());
+        foreach (var item in insertedData)
+            Assert.Equal(item.TextCol, item.BoolCol ? "Bool is True" : "Bool is False");
+    }
 
-            // Retrieve the inserted data
-            var insertedData = await conn.QueryAsync<TestTable>(
-                "SELECT * FROM TestTable ORDER BY Id");
+    [Fact]
+    public async Task ExecuteBulkInsertAsync_InsertInBatches()
+    {
+        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
 
-            // Validate that the data matches
-            Assert.Equal(sampleData.Count, insertedData.Count());
-            foreach (var item in insertedData)
-                Assert.Equal(item.TextCol, item.BoolCol ? "Bool is True" : "Bool is False");
-        }
+        // Define properties to use
+        List<string> properties = new() { "TextCol", "NumberCol", "BoolCol" };
 
-        [Fact]
-        public async Task ExecuteBulkInsertAsync_InsertInBatches()
+        // Insert using the extension method
+        await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, properties, batchSize: 2);
+
+        // Retrieve the inserted data
+        var insertedData = await conn.QueryAsync<TestTable>(
+            "SELECT * FROM TestTable ORDER BY Id");
+
+        // Validate that the data matches
+        Assert.Equal(sampleData.Count, insertedData.Count());
+        for (int i = 0; i < sampleData.Count; i++)
         {
-            using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
-            List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
-
-            // Define properties to use
-            List<string> properties = new() { "TextCol", "NumberCol", "BoolCol" };
-
-            // Insert using the extension method
-            await conn.ExecuteBulkInsertAsync(
-                "TestTable", sampleData, properties, batchSize: 2);
-
-            // Retrieve the inserted data
-            var insertedData = await conn.QueryAsync<TestTable>(
-                "SELECT * FROM TestTable ORDER BY Id");
-
-            // Validate that the data matches
-            Assert.Equal(sampleData.Count, insertedData.Count());
-            for (int i = 0; i < sampleData.Count; i++)
-            {
-                Assert.Equal(sampleData[i].TextCol, insertedData.ElementAt(i).TextCol);
-                Assert.Equal(sampleData[i].NumberCol, insertedData.ElementAt(i).NumberCol);
-                Assert.Equal(sampleData[i].BoolCol, insertedData.ElementAt(i).BoolCol);
-            }
+            Assert.Equal(sampleData[i].TextCol, insertedData.ElementAt(i).TextCol);
+            Assert.Equal(sampleData[i].NumberCol, insertedData.ElementAt(i).NumberCol);
+            Assert.Equal(sampleData[i].BoolCol, insertedData.ElementAt(i).BoolCol);
         }
+    }
+
+    [Fact]
+    public async Task ExecuteBulkDeleteAsync_ExpectRowsGone()
+    {
+        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+
+        // Insert data
+        await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, new() { "TextCol", "NumberCol", "BoolCol" });
+
+        // Delete data
+        var rowsWithTextColToDelete = new List<string>() { "aaa", "ccc" };
+        await conn.ExecuteBulkDeleteAsync("TestTable", "TextCol", rowsWithTextColToDelete);
+
+        // Retrieve the remaining inserted data
+        var remainingRows = await conn.QueryAsync<TestTable>("SELECT * FROM TestTable ORDER BY Id");
+
+        // Validate
+        Assert.NotNull(remainingRows);
+        Assert.Equal(1, remainingRows?.Count());
+        Assert.Equal("bbb", remainingRows?.First().TextCol);
     }
 }

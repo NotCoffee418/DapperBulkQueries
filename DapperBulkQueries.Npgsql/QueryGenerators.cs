@@ -1,9 +1,6 @@
-﻿
-using System.Linq;
+﻿namespace DapperBulkQueries.Npgsql;
 
-namespace DapperBulkQueries.Npgsql;
-
-public class QueryGenerators
+public static class QueryGenerators
 {
     public static List<(string Query, DynamicParameters Parameters)> GenerateBulkInsert<T>(
     string tableName,
@@ -64,5 +61,25 @@ public class QueryGenerators
         }
         return result;
     }
+
+
+    public static (string Query, DynamicParameters Parameters) GenerateBulkDelete<T>(
+        string tableName, string selectorColumnName, List<T> selectorValues)
+    {
+        // Generate parameters
+        var parameters = new DynamicParameters();
+        for (int i = 0; i < selectorValues.Count; i++)
+            parameters.Add($"@{selectorColumnName}_{i}", selectorValues[i]);
+
+        // Generate query string
+        var sqlBuilder = new StringBuilder($"DELETE FROM {tableName} WHERE {selectorColumnName} IN (");
+        sqlBuilder.Append(string.Join(',',
+            Enumerable.Range(0, selectorValues.Count).Select(x => $"@{selectorColumnName}_{x}")));
+        sqlBuilder.Append(")");
+
+        // Return
+        return (sqlBuilder.ToString(), parameters);        
+    }
+
 
 }
