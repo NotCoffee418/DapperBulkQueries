@@ -117,7 +117,7 @@ var selectors = new List<string>() { "Id", "BoolCol" };
 // We also need to define which properties should be updated.
 var propertiesToUpdate = new List<string>() { "TextCol", "NumberCol" };
 
-// Finally we can updat execute the update like so
+// Finally we can execute the update like so
 await conn.ExecuteBulkUpdateAsync(
     tableName,
     updateData,
