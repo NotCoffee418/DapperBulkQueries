@@ -5,7 +5,7 @@ public static class QueryGenerators
     public static List<(string Query, DynamicParameters Parameters)> GenerateBulkInsert<T>(
     string tableName,
     List<T> rowObjects,
-    List<string> propertyNames,
+    List<string> columnNames,
     Dictionary<string, Func<T, object>> calculatedProperties = null,
     uint batchSize = 100)
     where T : class
@@ -13,7 +13,7 @@ public static class QueryGenerators
         // Preparation
         List<(string Query, DynamicParameters Parameters)> result = new();
         
-        var sqlBase = $"INSERT INTO {tableName} ({string.Join(",", propertyNames)}) VALUES ";
+        var sqlBase = $"INSERT INTO {tableName} ({string.Join(",", columnNames)}) VALUES ";
         var sqlBuilder = new StringBuilder(sqlBase);
         var parameters = new DynamicParameters();
         int batchCount = 0;
@@ -25,7 +25,7 @@ public static class QueryGenerators
             sqlBuilder.Append("(");
 
             // Handle plain properties
-            foreach (var propertyName in propertyNames)
+            foreach (var propertyName in columnNames)
             {
                 object value;
                 // Extract value from calculated property
@@ -81,14 +81,14 @@ public static class QueryGenerators
     internal static (string query, DynamicParameters parameters) GenerateBulkUpdate<T>(
         string tableName,
         List<T> rowObjects, 
-        List<string> selectorProperties, 
-        List<string> propertyNamesToUpdate, 
+        List<string> selectorColumnNames, 
+        List<string> columnNamesToUpdate, 
         Dictionary<string, Func<T, object>> calculatedProperties = null)
     {
         // Validate
-        if (selectorProperties.Count < 1)
+        if (selectorColumnNames.Count < 1)
             throw new ArgumentException("GenerateBulkUpdate received no selector properties");
-        if (selectorProperties.Count < 1)
+        if (selectorColumnNames.Count < 1)
             throw new ArgumentException("GenerateBulkUpdate received no properties to update");
         if (string.IsNullOrEmpty(tableName))
             throw new ArgumentException("GenerateBulkUpdate received no table name");
@@ -104,23 +104,23 @@ public static class QueryGenerators
             sqlBuilder.Append($"UPDATE {tableName} SET ");
             
             // Handle plain properties
-            foreach (var propertyName in propertyNamesToUpdate)
+            foreach (var columnName in columnNamesToUpdate)
             {
                 object value;
                 // Extract value from calculated property
-                if (calculatedProperties is not null && calculatedProperties.ContainsKey(propertyName))
-                    value = calculatedProperties[propertyName](rowObjects[i]);
+                if (calculatedProperties is not null && calculatedProperties.ContainsKey(columnName))
+                    value = calculatedProperties[columnName](rowObjects[i]);
                 // Extract value from class property
                 else
-                    value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
-                parameters.Add($"@{propertyName}_{i}", value);
-                sqlBuilder.Append($"{propertyName} = @{propertyName}_{i},");
+                    value = rowObjects[i].GetType().GetProperty(columnName).GetValue(rowObjects[i]);
+                parameters.Add($"@{columnName}_{i}", value);
+                sqlBuilder.Append($"{columnName} = @{columnName}_{i},");
             }
 
             // Remove trailing comma on SETs & add WHERE
             sqlBuilder.Remove(sqlBuilder.Length - 1, 1);
-            sqlBuilder.Append($" WHERE {string.Join(" AND ", selectorProperties.Select(p => $"{p} = @{p}_{i}"))};");
-            foreach (var propertyName in selectorProperties)
+            sqlBuilder.Append($" WHERE {string.Join(" AND ", selectorColumnNames.Select(p => $"{p} = @{p}_{i}"))};");
+            foreach (var propertyName in selectorColumnNames)
             {
                 var value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
                 parameters.Add($"@{propertyName}_{i}", value);

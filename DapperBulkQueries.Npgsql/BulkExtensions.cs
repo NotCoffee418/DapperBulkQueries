@@ -8,7 +8,7 @@ public static class BulkExtensions
     /// <typeparam name="T">Corresponding class for the table</typeparam>
     /// <param name="tableName"></param>
     /// <param name="rowObjects">Class to extract property names from.</param>
-    /// <param name="propertyNames">Property names which have corresponding columns that should be included in the insert</param>
+    /// <param name="columnNames">Property names which have corresponding columns that should be included in the insert</param>
     /// <param name="calculatedProperties">
     /// Properties that need to be calculated with a function.
     /// Dict of column name and Function of input type outputting the value to be inserted.
@@ -24,14 +24,14 @@ public static class BulkExtensions
         this NpgsqlConnection conn,
         string tableName,
         List<T> rowObjects,
-        List<string> propertyNames,
+        List<string> columnNames,
         Dictionary<string, Func<T, object>> calculatedProperties = null,
         uint batchSize = 100)
         where T : class
     {
         // Generate queries
         var batches = QueryGenerators.GenerateBulkInsert(
-            tableName, rowObjects, propertyNames, calculatedProperties, batchSize);
+            tableName, rowObjects, columnNames, calculatedProperties, batchSize);
 
         // Execute all batches
         foreach ((string query, DynamicParameters parameters) in batches)
@@ -66,11 +66,11 @@ public static class BulkExtensions
     /// <param name="conn"></param>
     /// <param name="tableName"></param>
     /// <param name="rowObjects"></param>
-    /// <param name="selectorProperties">
+    /// <param name="selectorColumns">
     /// Used to identify a row to update.
     /// These are the properties for the WHERE clauses, using AND between each.
     /// </param>
-    /// <param name="propertyNamesToUpdate"></param>
+    /// <param name="columnsToUpdate"></param>
     /// <param name="calculatedProperties">
     /// Properties that need to be calculated with a function.
     /// Dict of column name and Function of input type outputting the value to be inserted.
@@ -81,13 +81,13 @@ public static class BulkExtensions
         this NpgsqlConnection conn,
         string tableName,
         List<T> rowObjects,
-        List<string> selectorProperties,
-        List<string> propertyNamesToUpdate,
+        List<string> selectorColumns,
+        List<string> columnsToUpdate,
         Dictionary<string, Func<T, object>> calculatedProperties = null)
         where T : class
     {
         (string query, DynamicParameters parameters) = QueryGenerators.GenerateBulkUpdate(
-            tableName, rowObjects, selectorProperties, propertyNamesToUpdate, calculatedProperties);
+            tableName, rowObjects, selectorColumns, columnsToUpdate, calculatedProperties);
         return conn.ExecuteAsync(query, parameters);
     }
 }
