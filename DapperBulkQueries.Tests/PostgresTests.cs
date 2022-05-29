@@ -134,4 +134,42 @@ public class PostgresTests : IDisposable
         Assert.Equal(1, remainingRows?.Count());
         Assert.Equal("bbb", remainingRows?.First().TextCol);
     }
+
+    [Fact]
+    public async Task ExecuteBulkUpdateAsync_ExpectRowsChanged()
+    {
+        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+
+        // Insert data
+        await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, new() { "TextCol", "NumberCol", "BoolCol" });
+
+        // Updated version of first and second
+        var updateData = new List<TestTable>()
+        {
+            new TestTable() { Id = 1, TextCol = "Updated first", NumberCol = 5, BoolCol = true },
+            new TestTable() { Id = 2, TextCol = "Updated second", NumberCol = 6, BoolCol = false }
+        };
+
+        // Update data
+        await conn.ExecuteBulkUpdateAsync(
+            "TestTable",
+            updateData,
+            new List<string>() { "Id", "BoolCol" }, // Update where ID AND BoolCol match
+            new() { "TextCol", "NumberCol", }); // Properties to update
+
+        // Retrieve the data in it's current form
+        var changedRows = (await conn.QueryAsync<TestTable>("SELECT * FROM TestTable ORDER BY Id")).ToList();
+
+        // Validate
+        Assert.NotNull(changedRows);
+        Assert.Equal(3, changedRows?.Count());
+        Assert.Equal("Updated first", changedRows[0].TextCol);
+        Assert.Equal("Updated second", changedRows?[1].TextCol);
+        Assert.Equal(5, changedRows[0].NumberCol);
+        Assert.Equal(6, changedRows[1].NumberCol);
+        Assert.True(changedRows[2].IsPropertiesMatch(sampleData[2]), 
+            "Rows were updated but another row changed too");
+    }
 }

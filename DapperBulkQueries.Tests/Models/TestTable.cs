@@ -2,7 +2,7 @@
 
 public class TestTable
 {
-    public ulong Id { get; set; }
+    public long Id { get; set; }
     public string TextCol { get; set; }
     public decimal NumberCol { get; set; }
     public bool BoolCol { get; set; }
