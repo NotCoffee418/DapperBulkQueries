@@ -12,10 +12,8 @@ public static class QueryGenerators
     {
         // Preparation
         List<(string Query, DynamicParameters Parameters)> result = new();
-        List<string> allColumnNames = calculatedProperties is null ? propertyNames :
-            propertyNames.Concat(calculatedProperties.Keys).ToList();
         
-        var sqlBase = $"INSERT INTO {tableName} ({string.Join(",", allColumnNames)}) VALUES ";
+        var sqlBase = $"INSERT INTO {tableName} ({string.Join(",", propertyNames)}) VALUES ";
         var sqlBuilder = new StringBuilder(sqlBase);
         var parameters = new DynamicParameters();
         int batchCount = 0;
@@ -29,18 +27,17 @@ public static class QueryGenerators
             // Handle plain properties
             foreach (var propertyName in propertyNames)
             {
-                var value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
+                object value;
+                // Extract value from calculated property
+                if (calculatedProperties is not null && calculatedProperties.ContainsKey(propertyName))
+                    value = calculatedProperties[propertyName](rowObjects[i]);
+                // Extract value from class property
+                else
+                    value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
+
                 parameters.Add($"@{propertyName}_{i}", value);
                 sqlBuilder.Append($"@{propertyName}_{i},");
             }
-            // Handle calculated properties
-            if (calculatedProperties is not null)
-                foreach ((string propertyName, Func<T, object> getValue) in calculatedProperties)
-                {
-                    object value = getValue(rowObjects[i]);
-                    parameters.Add($"@{propertyName}_{i}", value);
-                    sqlBuilder.Append($"@{propertyName}_{i},");
-                }
             sqlBuilder.Remove(sqlBuilder.Length - 1, 1);
             sqlBuilder.Append("),");
 
@@ -86,29 +83,39 @@ public static class QueryGenerators
         List<T> rowObjects, 
         List<string> selectorProperties, 
         List<string> propertyNamesToUpdate, 
-        Dictionary<string, Func<T, object>> calculatedProperties)
+        Dictionary<string, Func<T, object>> calculatedProperties = null)
     {
+        // Validate
+        if (selectorProperties.Count < 1)
+            throw new ArgumentException("GenerateBulkUpdate received no selector properties");
+        if (selectorProperties.Count < 1)
+            throw new ArgumentException("GenerateBulkUpdate received no properties to update");
+        if (string.IsNullOrEmpty(tableName))
+            throw new ArgumentException("GenerateBulkUpdate received no table name");
+        if (rowObjects.Count == 0)
+            return ("", new DynamicParameters()); // Nothing to do
+
+        // Generate query
         List<(string query, DynamicParameters parameters)> result = new();
         var sqlBuilder = new StringBuilder("BEGIN;" + Environment.NewLine);
         var parameters = new DynamicParameters();
         for (int i = 0; i < rowObjects.Count; i++)
         {
             sqlBuilder.Append($"UPDATE {tableName} SET ");
+            
             // Handle plain properties
             foreach (var propertyName in propertyNamesToUpdate)
             {
-                var value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
+                object value;
+                // Extract value from calculated property
+                if (calculatedProperties is not null && calculatedProperties.ContainsKey(propertyName))
+                    value = calculatedProperties[propertyName](rowObjects[i]);
+                // Extract value from class property
+                else
+                    value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
                 parameters.Add($"@{propertyName}_{i}", value);
                 sqlBuilder.Append($"{propertyName} = @{propertyName}_{i},");
             }
-            // Handle calculated properties
-            if (calculatedProperties is not null)
-                foreach ((string propertyName, Func<T, object> getValue) in calculatedProperties)
-                {
-                    object value = getValue(rowObjects[i]);
-                    parameters.Add($"@{propertyName}_{i}", value);
-                    sqlBuilder.Append($"{propertyName} = @{propertyName}_{i},");
-                }
 
             // Remove trailing comma on SETs & add WHERE
             sqlBuilder.Remove(sqlBuilder.Length - 1, 1);

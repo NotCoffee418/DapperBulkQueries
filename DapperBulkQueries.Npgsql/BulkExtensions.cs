@@ -10,8 +10,9 @@ public static class BulkExtensions
     /// <param name="rowObjects">Class to extract property names from.</param>
     /// <param name="propertyNames">Property names which have corresponding columns that should be included in the insert</param>
     /// <param name="calculatedProperties">
-    /// Properties that need to be calculated with a function
-    /// Dict of column name and Function of input type outputting the value to be inserted
+    /// Properties that need to be calculated with a function.
+    /// Dict of column name and Function of input type outputting the value to be inserted.
+    /// Properties should still be defined in propertyNames. calculatedProperties acts as an override.
     /// </param>
     /// <param name="batchSize">
     /// How many inserts to bulk in a single query. (default = 100)
@@ -70,7 +71,11 @@ public static class BulkExtensions
     /// These are the properties for the WHERE clauses, using AND between each.
     /// </param>
     /// <param name="propertyNamesToUpdate"></param>
-    /// <param name="calculatedProperties"></param>
+    /// <param name="calculatedProperties">
+    /// Properties that need to be calculated with a function.
+    /// Dict of column name and Function of input type outputting the value to be inserted.
+    /// Properties should still be defined in propertyNames. calculatedProperties acts as an override.
+    /// </param>
     /// <returns></returns>
     public static Task ExecuteBulkUpdateAsync<T>(
         this NpgsqlConnection conn,

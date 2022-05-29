@@ -63,7 +63,7 @@ public class PostgresTests : IDisposable
         List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
 
         // Define properties to use
-        List<string> properties = new() { "NumberCol", "BoolCol" };
+        List<string> properties = new() { "NumberCol", "BoolCol", "TextCol" };
 
         // Calculated properties, make text depend on bool
         Dictionary<string, Func<TestTable, object>> calculatedProperties = new()
