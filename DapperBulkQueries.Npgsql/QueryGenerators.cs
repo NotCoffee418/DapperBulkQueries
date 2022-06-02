@@ -27,14 +27,7 @@ public static class QueryGenerators
             // Handle plain properties
             foreach (var propertyName in columnNames)
             {
-                object value;
-                // Extract value from calculated property
-                if (calculatedProperties is not null && calculatedProperties.ContainsKey(propertyName))
-                    value = calculatedProperties[propertyName](rowObjects[i]);
-                // Extract value from class property
-                else
-                    value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
-
+                object value = GetPropertyValue(propertyName, rowObjects[i], calculatedProperties);
                 parameters.Add($"@{propertyName}_{i}", value);
                 sqlBuilder.Append($"@{propertyName}_{i},");
             }
@@ -106,13 +99,7 @@ public static class QueryGenerators
             // Handle plain properties
             foreach (var columnName in columnNamesToUpdate)
             {
-                object value;
-                // Extract value from calculated property
-                if (calculatedProperties is not null && calculatedProperties.ContainsKey(columnName))
-                    value = calculatedProperties[columnName](rowObjects[i]);
-                // Extract value from class property
-                else
-                    value = rowObjects[i].GetType().GetProperty(columnName).GetValue(rowObjects[i]);
+                object value = GetPropertyValue(columnName, rowObjects[i], calculatedProperties);
                 parameters.Add($"@{columnName}_{i}", value);
                 sqlBuilder.Append($"{columnName} = @{columnName}_{i},");
             }
@@ -133,5 +120,37 @@ public static class QueryGenerators
         // Complete the query and return
         sqlBuilder.Append("COMMIT;");
         return (sqlBuilder.ToString(), parameters);
+    }
+
+    
+    /* --- HELPER FUNCTIONS --- */
+    /// <summary>
+    /// Gets the property value of an instance of T. 
+    /// Will use calculated property if any are defined.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="propertyName"></param>
+    /// <param name="item"></param>
+    /// <param name="calculatedProperties"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    private static object GetPropertyValue<T>(
+        string propertyName,
+        T item,
+        Dictionary<string, Func<T, object>> calculatedProperties)
+    {
+        // Extract value from calculated property
+        if (calculatedProperties is not null && calculatedProperties.ContainsKey(propertyName))
+            return calculatedProperties[propertyName](item);
+
+        // Extract value from class property
+        else
+        {
+            var property = item.GetType().GetProperty(propertyName);
+            if (property is null)
+                throw new ArgumentException(
+                    $"Failed to find property or calculated property for '{propertyName}");
+            return property.GetValue(item);
+        }
     }
 }
