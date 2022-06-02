@@ -53,6 +53,11 @@ public static class BulkExtensions
         string selectorColumnName,
         List<T> selectorValues)
     {
+        // Do nothing if there are no selectors
+        if (selectorValues.Count == 0)
+            return Task.CompletedTask;
+
+        // Generate & execute
         (string query, DynamicParameters parameters) = QueryGenerators.GenerateBulkDelete(
             tableName, selectorColumnName, selectorValues);
         return conn.ExecuteAsync(query, parameters);
