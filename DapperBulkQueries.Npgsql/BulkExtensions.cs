@@ -29,6 +29,13 @@ public static class BulkExtensions
         uint batchSize = 100)
         where T : class
     {
+        // Nothing to do
+        if (rowObjects.Count == 0)
+            return;        
+        // No columns specified
+        if (columnNames.Count == 0)
+            throw new ArgumentException("Can't insert with no columns specified");
+
         // Generate queries
         var batches = QueryGenerators.GenerateBulkInsert(
             tableName, rowObjects, columnNames, calculatedProperties, batchSize);
@@ -91,6 +98,18 @@ public static class BulkExtensions
         Dictionary<string, Func<T, object>> calculatedProperties = null)
         where T : class
     {
+        // Do nothing if there is nothing to update
+        if (rowObjects.Count == 0)
+            return Task.CompletedTask;
+        // No columns specified
+        if (columnsToUpdate.Count == 0)
+            throw new ArgumentException("Can't update with no columns specified");
+        // Ensure we have a selector    
+        if (selectorColumns.Count == 0)
+            throw new ArgumentException(
+                "At least one selector column must be specified.");
+
+        // Generate & execute
         (string query, DynamicParameters parameters) = QueryGenerators.GenerateBulkUpdate(
             tableName, rowObjects, selectorColumns, columnsToUpdate, calculatedProperties);
         return conn.ExecuteAsync(query, parameters);
