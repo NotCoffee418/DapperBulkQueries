@@ -38,8 +38,9 @@ public static class QueryGenerators
             // Or if it's the final item
             if (i == rowObjects.Count - 1 || (batchCount != 0 && batchCount >= batchSize))
             {
-                // Remove trailing comma & execute
+                // Remove trailing comma, add ; & execute
                 sqlBuilder.Remove(sqlBuilder.Length - 1, 1);
+                sqlBuilder.Append(';');
                 result.Add((sqlBuilder.ToString(), parameters));
 
                 // Reset
@@ -65,7 +66,7 @@ public static class QueryGenerators
         var sqlBuilder = new StringBuilder($"DELETE FROM {tableName} WHERE {selectorColumnName} IN (");
         sqlBuilder.Append(string.Join(',',
             Enumerable.Range(0, selectorValues.Count).Select(x => $"@{selectorColumnName}_{x}")));
-        sqlBuilder.Append(")");
+        sqlBuilder.Append(");");
 
         // Return
         return (sqlBuilder.ToString(), parameters);        
