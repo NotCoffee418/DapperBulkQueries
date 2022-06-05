@@ -7,7 +7,8 @@ public static class QueryGenerators
     List<T> rowObjects,
     List<string> columnNames,
     Dictionary<string, Func<T, object>> calculatedProperties = null,
-    uint batchSize = 100)
+    uint batchSize = 100, 
+    string paramPrefix = "")
     where T : class
     {
         // Preparation
@@ -28,8 +29,8 @@ public static class QueryGenerators
             foreach (var propertyName in columnNames)
             {
                 object value = GetPropertyValue(propertyName, rowObjects[i], calculatedProperties);
-                parameters.Add($"@{propertyName}_{i}", value);
-                sqlBuilder.Append($"@{propertyName}_{i},");
+                parameters.Add($"@{paramPrefix}{propertyName}_{i}", value);
+                sqlBuilder.Append($"@{paramPrefix}{propertyName}_{i},");
             }
             sqlBuilder.Remove(sqlBuilder.Length - 1, 1);
             sqlBuilder.Append("),");
@@ -55,29 +56,30 @@ public static class QueryGenerators
 
 
     public static (string Query, DynamicParameters Parameters) GenerateBulkDelete<T>(
-        string tableName, string selectorColumnName, List<T> selectorValues)
+        string tableName, string selectorColumnName, List<T> selectorValues, string paramPrefix = "")
     {
         // Generate parameters
         var parameters = new DynamicParameters();
         for (int i = 0; i < selectorValues.Count; i++)
-            parameters.Add($"@{selectorColumnName}_{i}", selectorValues[i]);
+            parameters.Add($"@{paramPrefix}{selectorColumnName}_{i}", selectorValues[i]);
 
         // Generate query string
         var sqlBuilder = new StringBuilder($"DELETE FROM {tableName} WHERE {selectorColumnName} IN (");
         sqlBuilder.Append(string.Join(',',
-            Enumerable.Range(0, selectorValues.Count).Select(x => $"@{selectorColumnName}_{x}")));
+            Enumerable.Range(0, selectorValues.Count).Select(x => $"@{paramPrefix}{selectorColumnName}_{x}")));
         sqlBuilder.Append(");");
 
         // Return
         return (sqlBuilder.ToString(), parameters);        
     }
 
-    internal static (string query, DynamicParameters parameters) GenerateBulkUpdate<T>(
+    public static (string Query, DynamicParameters Parameters) GenerateBulkUpdate<T>(
         string tableName,
         List<T> rowObjects, 
         List<string> selectorColumnNames, 
         List<string> columnNamesToUpdate, 
-        Dictionary<string, Func<T, object>> calculatedProperties = null)
+        Dictionary<string, Func<T, object>> calculatedProperties = null,
+        string paramPrefix = "")
     {
         // Validate
         if (selectorColumnNames.Count < 1)
@@ -101,17 +103,17 @@ public static class QueryGenerators
             foreach (var columnName in columnNamesToUpdate)
             {
                 object value = GetPropertyValue(columnName, rowObjects[i], calculatedProperties);
-                parameters.Add($"@{columnName}_{i}", value);
-                sqlBuilder.Append($"{columnName} = @{columnName}_{i},");
+                parameters.Add($"@{paramPrefix}{columnName}_{i}", value);
+                sqlBuilder.Append($"{columnName} = @{paramPrefix}{columnName}_{i},");
             }
 
             // Remove trailing comma on SETs & add WHERE
             sqlBuilder.Remove(sqlBuilder.Length - 1, 1);
-            sqlBuilder.Append($" WHERE {string.Join(" AND ", selectorColumnNames.Select(p => $"{p} = @{p}_{i}"))};");
+            sqlBuilder.Append($" WHERE {string.Join(" AND ", selectorColumnNames.Select(p => $"{p} = @{paramPrefix}{p}_{i}"))};");
             foreach (var propertyName in selectorColumnNames)
             {
                 var value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
-                parameters.Add($"@{propertyName}_{i}", value);
+                parameters.Add($"@{paramPrefix}{propertyName}_{i}", value);
             }
 
             // Complete the row

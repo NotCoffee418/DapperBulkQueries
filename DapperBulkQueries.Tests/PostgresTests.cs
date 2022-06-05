@@ -172,4 +172,41 @@ public class PostgresTests : IDisposable
         Assert.True(changedRows[2].IsPropertiesMatch(sampleData[2]), 
             "Rows were updated but another row changed too");
     }
+
+    [Fact]
+    public async Task InsertUpdateDelete_GeneratedWithPrefix_NoErrors()
+    {
+        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+
+        // Insert data
+        var generatedInsert = QueryGenerators.GenerateBulkInsert(
+            "TestTable",
+            sampleData,
+            new() { "TextCol", "NumberCol", "BoolCol" },
+            paramPrefix: "i_");
+        await conn.ExecuteAsync(generatedInsert[0].Query, generatedInsert[0].Parameters);
+
+        // Update data
+        var updateData = new List<TestTable>()
+        {
+            new TestTable() { Id = 1, TextCol = "Updated first", NumberCol = 5, BoolCol = true },
+            new TestTable() { Id = 2, TextCol = "Updated second", NumberCol = 6, BoolCol = false }
+        };
+        var generatedUpdate = QueryGenerators.GenerateBulkUpdate(
+            "TestTable",
+            updateData,
+            new List<string>() { "Id", "BoolCol" }, // Update where ID AND BoolCol match
+            new() { "TextCol", "NumberCol", },
+            paramPrefix: "u_"); // Properties to update
+        await conn.ExecuteAsync(generatedUpdate.Query, generatedUpdate.Parameters);
+
+        // Delete Data
+        var generatedDelete = QueryGenerators.GenerateBulkDelete(
+            "TestTable", 
+            "TextCol", 
+            new List<string>() { "aaa", "ccc" },
+            paramPrefix: "d_");
+        await conn.ExecuteAsync(generatedDelete.Query, generatedDelete.Parameters);
+    }
 }
