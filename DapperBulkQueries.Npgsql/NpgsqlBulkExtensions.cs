@@ -1,6 +1,6 @@
 ﻿namespace DapperBulkQueries.Npgsql;
 
-public static class BulkExtensions
+public static class NpgsqlBulkExtensions
 {
     /// <summary>
     /// Inserts multiple rows into a table
@@ -37,7 +37,8 @@ public static class BulkExtensions
             throw new ArgumentException("Can't insert with no columns specified");
 
         // Generate queries
-        var batches = QueryGenerators.GenerateBulkInsert(
+        PgQueryGenerator gen = new PgQueryGenerator();
+        var batches = gen.GenerateBulkInsert(
             tableName, rowObjects, columnNames, calculatedProperties, batchSize);
 
         // Execute all batches
@@ -65,7 +66,8 @@ public static class BulkExtensions
             return Task.CompletedTask;
 
         // Generate & execute
-        (string query, DynamicParameters parameters) = QueryGenerators.GenerateBulkDelete(
+        PgQueryGenerator gen = new PgQueryGenerator();
+        (string query, DynamicParameters parameters) = gen.GenerateBulkDelete(
             tableName, selectorColumnName, selectorValues);
         return conn.ExecuteAsync(query, parameters);
     }
@@ -112,7 +114,8 @@ public static class BulkExtensions
                 "At least one selector column must be specified.");
 
         // Generate & execute
-        (string query, DynamicParameters parameters) = QueryGenerators.GenerateBulkUpdate(
+        PgQueryGenerator gen = new PgQueryGenerator();
+        (string query, DynamicParameters parameters) = gen.GenerateBulkUpdate(
             tableName, rowObjects, selectorColumns, columnsToUpdate, calculatedProperties, useTransaction);
         return conn.ExecuteAsync(query, parameters);
     }

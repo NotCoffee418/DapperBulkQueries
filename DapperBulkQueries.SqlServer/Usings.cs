@@ -5,7 +5,7 @@ global using System.Collections.Generic;
 global using System.Threading.Tasks;
 
 
-global using Npgsql;
+global using Microsoft.Data.SqlClient;
 global using Dapper;
 
 

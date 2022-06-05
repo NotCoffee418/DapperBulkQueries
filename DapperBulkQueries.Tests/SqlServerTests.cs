@@ -2,21 +2,22 @@
 
 namespace DapperBulkQueries.Tests;
 
-public class PostgresTests : IDisposable
+public class SqlServerTests : IDisposable
 {
     // Setup
-    public PostgresTests()
+    public SqlServerTests()
     {
         Task.Run(async () =>
         {
-            var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+            var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
             await conn.ExecuteAsync(@"
-                DROP TABLE IF EXISTS TestTable;
-                CREATE TABLE TestTable (
-                    Id serial PRIMARY KEY,
-                    TextCol character varying,
-                    NumberCol numeric,
-                    BoolCol boolean);");
+                IF OBJECT_ID('dbo.TestTable', 'U') IS NOT NULL DROP TABLE dbo.TestTable; 
+                CREATE TABLE dbo.TestTable (
+                    Id int IDENTITY(1,1) PRIMARY KEY,
+                    TextCol nvarchar(128),
+                    NumberCol numeric(32,16),
+                    BoolCol bit
+                );");
         }).Wait();            
     }
     
@@ -25,7 +26,7 @@ public class PostgresTests : IDisposable
     {
         Task.Run(async () =>
         {
-            var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+            var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
             await conn.ExecuteAsync(@"DROP TABLE TestTable");
         }).Wait();
     }
@@ -34,7 +35,7 @@ public class PostgresTests : IDisposable
     [Fact]
     public async Task ExecuteBulkInsertAsync_CanReturnMatchInSameSequence()
     {
-        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        using var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
         List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
 
         // Define properties to use
@@ -61,7 +62,7 @@ public class PostgresTests : IDisposable
     [Fact]
     public async Task ExecuteBulkInsertAsync_WithCalculatedProperties_ExpectsMatchingOutput()
     {
-        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        using var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
         List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
 
         // Define properties to use
@@ -90,7 +91,7 @@ public class PostgresTests : IDisposable
     [Fact]
     public async Task ExecuteBulkInsertAsync_InsertInBatches()
     {
-        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        using var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
         List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
 
         // Define properties to use
@@ -117,7 +118,7 @@ public class PostgresTests : IDisposable
     [Fact]
     public async Task ExecuteBulkDeleteAsync_ExpectRowsGone()
     {
-        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        using var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
         List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
 
         // Insert data
@@ -140,7 +141,7 @@ public class PostgresTests : IDisposable
     [Fact]
     public async Task ExecuteBulkUpdateAsync_ExpectRowsChanged()
     {
-        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        using var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
         List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
 
         // Insert data
@@ -179,7 +180,7 @@ public class PostgresTests : IDisposable
     [Fact]
     public async Task ExecuteBulkUpdateAsync_ExpectRowsChanged_WithoutTransaction()
     {
-        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        using var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
         List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
 
         // Insert data
@@ -218,11 +219,11 @@ public class PostgresTests : IDisposable
     [Fact]
     public async Task InsertUpdateDelete_GeneratedWithPrefix_NoErrors()
     {
-        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        using var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
         List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
 
         // Insert data
-        PgQueryGenerator gen = new PgQueryGenerator();
+        MsQueryGenerator gen = new();
         var generatedInsert = gen.GenerateBulkInsert(
             "TestTable",
             sampleData,
@@ -256,8 +257,37 @@ public class PostgresTests : IDisposable
     [Fact] // test some equivalent in mssql, then delete thiso ne
     public async Task ExecuteBulkInsertAsync_AdvancedTransaction_NoCrash()
     {
-        // Queries with parameters do not work in PG
-        // because the @ symbol, required to assign parameters
-        // has a different meaning causing it to conflict.
+        using var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+
+        PgQueryGenerator gen = new PgQueryGenerator();
+        var generatedInsert = gen.GenerateBulkInsert(
+            "TestTable",
+            sampleData,
+            new() { "TextCol", "NumberCol", "BoolCol" },
+            paramPrefix: "i_");
+
+        // Insert with conditional update and parameters
+        StringBuilder sql = new();
+        DynamicParameters parameters = generatedInsert[0].Parameters;
+        parameters.Add("NewValue", "ddd");
+        sql.AppendLine(@"
+            DECLARE @TestVariable nvarchar(3);
+            DECLARE @TestCondition bit;");
+        sql.AppendLine(generatedInsert[0].Query);
+        sql.AppendLine(@"
+            SELECT @TestCondition = 1;
+            SELECT @TestVariable = @NewValue;
+            IF @TestCondition = 1
+            BEGIN
+                UPDATE TestTable SET TextCol = @TestVariable WHERE Id = 1;
+            END;");
+        await conn.ExecuteAsync(sql.ToString(), parameters);
+
+        // Validate
+        TestTable changedRow = await conn.QueryFirstAsync<TestTable>("SELECT * FROM TestTable WHERE Id = 1");
+        Assert.NotNull(changedRow);
+        Assert.Equal("ddd", changedRow.TextCol);
+        
     }
 }

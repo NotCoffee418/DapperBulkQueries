@@ -9,5 +9,13 @@ namespace DapperBulkQueries.Tests
             bool check = await conn.ExecuteScalarAsync<bool>("SELECT true");
             Assert.True(check);            
         }
+
+        [Fact]
+        public async Task TestSqlServerConnection()
+        {
+            var conn = await ConnectionHelper.GetOpenSqlServerConnectionAsync();
+            bool check = await conn.ExecuteScalarAsync<bool>("SELECT 1");
+            Assert.True(check);
+        }
     }
 }

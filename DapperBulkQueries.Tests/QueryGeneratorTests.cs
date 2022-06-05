@@ -1,4 +1,6 @@
-﻿namespace DapperBulkQueries.Tests;
+﻿
+
+namespace DapperBulkQueries.Tests;
 
 public class QueryGeneratorTests
 {
@@ -11,7 +13,8 @@ public class QueryGeneratorTests
         List<string> properties = new() { "TextCol", "NumberCol", "BoolCol" };
 
         // Insert using the extension method
-        var insertData = QueryGenerators.GenerateBulkInsert("TestTable", sampleData, properties, batchSize: 2);
+        QueryGeneratorBase gen = new PgQueryGenerator();
+        var insertData = gen.GenerateBulkInsert("TestTable", sampleData, properties, batchSize: 2);
 
         // Validate that there are 2 batches for our 3 entries with batch size of 2
         Assert.Equal(2, insertData.Count());

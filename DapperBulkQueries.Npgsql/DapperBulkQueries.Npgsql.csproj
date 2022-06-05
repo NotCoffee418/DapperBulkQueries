@@ -24,8 +24,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.0.123" />
     <PackageReference Include="Npgsql" Version="6.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DapperBulkQueries.Common\DapperBulkQueries.Common.csproj" />
   </ItemGroup>
 
 </Project>

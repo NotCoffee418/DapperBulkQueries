@@ -1,8 +1,29 @@
-﻿namespace DapperBulkQueries.Npgsql;
+﻿namespace DapperBulkQueries.Common;
 
-public static class QueryGenerators
+public abstract class QueryGeneratorBase
 {
-    public static List<(string Query, DynamicParameters Parameters)> GenerateBulkInsert<T>(
+    public QueryGeneratorBase(
+        string transactionOpen,
+        string transactionClose)
+    {
+        TransactionOpen = transactionOpen;
+        TransactionClose = transactionClose;
+    }
+
+    /// <summary>
+    /// Defines syntax for opening a transaction.
+    /// Should include ; at the end if any.
+    /// </summary>
+    protected string TransactionOpen { get; set; }
+
+    /// <summary>
+    /// Defines syntax for closing a transaction.
+    /// Should include ; at the end if any.
+    /// </summary>
+    protected string TransactionClose { get; set; }
+    
+
+    public virtual List<(string Query, DynamicParameters Parameters)> GenerateBulkInsert<T>(
     string tableName,
     List<T> rowObjects,
     List<string> columnNames,
@@ -55,7 +76,7 @@ public static class QueryGenerators
     }
 
 
-    public static (string Query, DynamicParameters Parameters) GenerateBulkDelete<T>(
+    public virtual (string Query, DynamicParameters Parameters) GenerateBulkDelete<T>(
         string tableName, string selectorColumnName, List<T> selectorValues, string paramPrefix = "")
     {
         // Generate parameters
@@ -73,7 +94,7 @@ public static class QueryGenerators
         return (sqlBuilder.ToString(), parameters);        
     }
 
-    public static (string Query, DynamicParameters Parameters) GenerateBulkUpdate<T>(
+    public virtual (string Query, DynamicParameters Parameters) GenerateBulkUpdate<T>(
         string tableName,
         List<T> rowObjects, 
         List<string> selectorColumnNames, 
@@ -96,7 +117,7 @@ public static class QueryGenerators
         List<(string query, DynamicParameters parameters)> result = new();
         var sqlBuilder = new StringBuilder();
         if (useTransaction)
-            sqlBuilder.Append("BEGIN;" + Environment.NewLine);
+            sqlBuilder.Append(TransactionOpen + Environment.NewLine);
         var parameters = new DynamicParameters();
         for (int i = 0; i < rowObjects.Count; i++)
         {
@@ -107,25 +128,24 @@ public static class QueryGenerators
             {
                 object value = GetPropertyValue(columnName, rowObjects[i], calculatedProperties);
                 parameters.Add($"@{paramPrefix}{columnName}_{i}", value);
-                sqlBuilder.Append($"{columnName} = @{paramPrefix}{columnName}_{i},");
+                sqlBuilder.Append($"{columnName} = @{paramPrefix}{columnName}_{i}, ");
             }
 
             // Remove trailing comma on SETs & add WHERE
-            sqlBuilder.Remove(sqlBuilder.Length - 1, 1);
-            sqlBuilder.Append($" WHERE {string.Join(" AND ", selectorColumnNames.Select(p => $"{p} = @{paramPrefix}{p}_{i}"))};");
+            sqlBuilder.Remove(sqlBuilder.Length - 2, 2);
+            sqlBuilder.AppendLine($" WHERE {string.Join(" AND ", selectorColumnNames.Select(p => $"{p} = @{paramPrefix}{p}_{i}"))};");
             foreach (var propertyName in selectorColumnNames)
             {
                 var value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
                 parameters.Add($"@{paramPrefix}{propertyName}_{i}", value);
             }
-
-            // Complete the row
-            sqlBuilder.Append(";");
         }
 
         // Complete the query and return
         if (useTransaction)
-            sqlBuilder.Append("COMMIT;" + Environment.NewLine);
+            sqlBuilder.Append(TransactionClose + Environment.NewLine);
+
+        var debug = sqlBuilder.ToString();
         return (sqlBuilder.ToString(), parameters);
     }
 
@@ -141,7 +161,7 @@ public static class QueryGenerators
     /// <param name="calculatedProperties"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentException"></exception>
-    private static object GetPropertyValue<T>(
+    protected object GetPropertyValue<T>(
         string propertyName,
         T item,
         Dictionary<string, Func<T, object>> calculatedProperties)
