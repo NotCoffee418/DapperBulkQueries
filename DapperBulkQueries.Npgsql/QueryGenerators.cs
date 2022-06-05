@@ -79,6 +79,7 @@ public static class QueryGenerators
         List<string> selectorColumnNames, 
         List<string> columnNamesToUpdate, 
         Dictionary<string, Func<T, object>> calculatedProperties = null,
+        bool useTransaction = true,
         string paramPrefix = "")
     {
         // Validate
@@ -93,7 +94,9 @@ public static class QueryGenerators
 
         // Generate query
         List<(string query, DynamicParameters parameters)> result = new();
-        var sqlBuilder = new StringBuilder("BEGIN;" + Environment.NewLine);
+        var sqlBuilder = new StringBuilder();
+        if (useTransaction)
+            sqlBuilder.Append("BEGIN;" + Environment.NewLine);
         var parameters = new DynamicParameters();
         for (int i = 0; i < rowObjects.Count; i++)
         {
@@ -121,7 +124,8 @@ public static class QueryGenerators
         }
 
         // Complete the query and return
-        sqlBuilder.Append("COMMIT;");
+        if (useTransaction)
+            sqlBuilder.Append("COMMIT;" + Environment.NewLine);
         return (sqlBuilder.ToString(), parameters);
     }
 

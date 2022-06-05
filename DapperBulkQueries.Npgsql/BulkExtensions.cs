@@ -88,6 +88,7 @@ public static class BulkExtensions
     /// Dict of column name and Function of input type outputting the value to be inserted.
     /// Properties should still be defined in propertyNames. calculatedProperties acts as an override.
     /// </param>
+    /// <param name="useTransaction">Revert all changes if something goes wrong</param>
     /// <returns></returns>
     public static Task ExecuteBulkUpdateAsync<T>(
         this NpgsqlConnection conn,
@@ -95,7 +96,8 @@ public static class BulkExtensions
         List<T> rowObjects,
         List<string> selectorColumns,
         List<string> columnsToUpdate,
-        Dictionary<string, Func<T, object>> calculatedProperties = null)
+        Dictionary<string, Func<T, object>> calculatedProperties = null,
+        bool useTransaction = true)
         where T : class
     {
         // Do nothing if there is nothing to update
@@ -111,7 +113,7 @@ public static class BulkExtensions
 
         // Generate & execute
         (string query, DynamicParameters parameters) = QueryGenerators.GenerateBulkUpdate(
-            tableName, rowObjects, selectorColumns, columnsToUpdate, calculatedProperties);
+            tableName, rowObjects, selectorColumns, columnsToUpdate, calculatedProperties, useTransaction);
         return conn.ExecuteAsync(query, parameters);
     }
 }
