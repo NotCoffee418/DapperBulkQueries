@@ -1,9 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+      <TargetFramework>netstandard2.1</TargetFramework>
 	  <LangVersion>latest</LangVersion>
 	  <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<Nullable>enable</Nullable>
 	  <Authors>Stijn Raeymaekers</Authors>
 	  <Build>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2000,1,1))).get_TotalDays())</Build>
 	  <Revision>$([MSBuild]::Divide($([System.DateTime]::get_Now().get_TimeOfDay().get_TotalSeconds()), 2).ToString('F0'))</Revision>
@@ -14,7 +15,6 @@
 	  <Description>Unofficial implementation for executing bulk INSERT, UPDATE and DELETE queries with Dapper for PostgreSQL.</Description>
 	  <Copyright></Copyright>
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
-    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);GetIncludedFiles</TargetsForTfmSpecificBuildOutput>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,12 +27,6 @@
   <ItemGroup>
     <PackageReference Include="Npgsql" Version="6.0.4" />
   </ItemGroup>
-
-  <Target Name="GetIncludedFiles">
-    <ItemGroup>
-	  <BuildOutputInPackage Include="$(OutputPath)DapperBulkQueries.Common.dll" />
-    </ItemGroup>
-  </Target>
   
   <ItemGroup>
     <ProjectReference Include="..\DapperBulkQueries.Common\DapperBulkQueries.Common.csproj" />
