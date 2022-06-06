@@ -15,6 +15,7 @@
 		<Description>Unofficial implementation for executing bulk INSERT, UPDATE and DELETE queries with Dapper for SqlServer.</Description>
 		<Copyright></Copyright>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);GetIncludedFiles</TargetsForTfmSpecificBuildOutput>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -27,6 +28,12 @@
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.Data.SqlClient" Version="4.1.0" />
 	</ItemGroup>
+
+  <Target Name="GetIncludedFiles">
+    <ItemGroup>
+	  <BuildOutputInPackage Include="$(OutputPath)DapperBulkQueries.Common.dll" />
+    </ItemGroup>
+  </Target>
 
 	<ItemGroup>
 		<ProjectReference Include="..\DapperBulkQueries.Common\DapperBulkQueries.Common.csproj" />
