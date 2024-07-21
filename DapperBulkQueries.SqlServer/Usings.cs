@@ -10,3 +10,4 @@ global using Dapper;
 
 
 global using DapperBulkQueries.Common;
+global using DapperBulkQueries.Common.Internal;

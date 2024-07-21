@@ -25,8 +25,9 @@ public static class NpgsqlBulkExtensions
         string tableName,
         List<T> rowObjects,
         List<string> columnNames,
-        Dictionary<string, Func<T, object>> calculatedProperties = null,
-        uint batchSize = 100)
+        Dictionary<string, Func<T, object>>? calculatedProperties = null,
+        uint batchSize = 100,
+        OnConflict onConflict = OnConflict.Error)
         where T : class
     {
         // Nothing to do
@@ -39,7 +40,7 @@ public static class NpgsqlBulkExtensions
         // Generate queries
         PgQueryGenerator gen = new PgQueryGenerator();
         var batches = gen.GenerateBulkInsert(
-            tableName, rowObjects, columnNames, calculatedProperties, batchSize);
+            DatabaseType.Npgsql, tableName, rowObjects, columnNames, calculatedProperties, batchSize, onConflict: onConflict);
 
         // Execute all batches
         foreach ((string query, DynamicParameters parameters) in batches)
@@ -68,7 +69,7 @@ public static class NpgsqlBulkExtensions
         // Generate & execute
         PgQueryGenerator gen = new PgQueryGenerator();
         (string query, DynamicParameters parameters) = gen.GenerateBulkDelete(
-            tableName, selectorColumnName, selectorValues);
+            DatabaseType.Npgsql, tableName, selectorColumnName, selectorValues);
         return conn.ExecuteAsync(query, parameters);
     }
 
@@ -116,7 +117,7 @@ public static class NpgsqlBulkExtensions
         // Generate & execute
         PgQueryGenerator gen = new PgQueryGenerator();
         (string query, DynamicParameters parameters) = gen.GenerateBulkUpdate(
-            tableName, rowObjects, selectorColumns, columnsToUpdate, calculatedProperties, useTransaction);
+            DatabaseType.Npgsql, tableName, rowObjects, selectorColumns, columnsToUpdate, calculatedProperties, useTransaction);
         return conn.ExecuteAsync(query, parameters);
     }
 }

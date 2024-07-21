@@ -225,6 +225,7 @@ public class SqlServerTests : IDisposable
         // Insert data
         MsQueryGenerator gen = new();
         var generatedInsert = gen.GenerateBulkInsert(
+            DatabaseType.SqlServer,
             "TestTable",
             sampleData,
             new() { "TextCol", "NumberCol", "BoolCol" },
@@ -238,6 +239,7 @@ public class SqlServerTests : IDisposable
             new TestTable() { Id = 2, TextCol = "Updated second", NumberCol = 6, BoolCol = false }
         };
         var generatedUpdate = gen.GenerateBulkUpdate(
+            DatabaseType.SqlServer,
             "TestTable",
             updateData,
             new List<string>() { "Id", "BoolCol" }, // Update where ID AND BoolCol match
@@ -247,6 +249,7 @@ public class SqlServerTests : IDisposable
 
         // Delete Data
         var generatedDelete = gen.GenerateBulkDelete(
+            DatabaseType.SqlServer,
             "TestTable", 
             "TextCol", 
             new List<string>() { "aaa", "ccc" },
@@ -262,6 +265,7 @@ public class SqlServerTests : IDisposable
 
         PgQueryGenerator gen = new PgQueryGenerator();
         var generatedInsert = gen.GenerateBulkInsert(
+            DatabaseType.SqlServer,
             "TestTable",
             sampleData,
             new() { "TextCol", "NumberCol", "BoolCol" },

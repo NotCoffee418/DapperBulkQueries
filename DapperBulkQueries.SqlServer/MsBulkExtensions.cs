@@ -40,7 +40,7 @@ public static class MsBulkExtensions
         // Generate queries
         MsQueryGenerator gen = new();
         var batches = gen.GenerateBulkInsert(
-            tableName, rowObjects, columnNames, calculatedProperties, batchSize);
+            DatabaseType.SqlServer, tableName, rowObjects, columnNames, calculatedProperties, batchSize);
 
         // Execute all batches
         foreach ((string query, DynamicParameters parameters) in batches)
@@ -69,7 +69,7 @@ public static class MsBulkExtensions
         // Generate & execute
         MsQueryGenerator gen = new();
         (string query, DynamicParameters parameters) = gen.GenerateBulkDelete(
-            tableName, selectorColumnName, selectorValues);
+            DatabaseType.SqlServer, tableName, selectorColumnName, selectorValues);
         return conn.ExecuteAsync(query, parameters);
     }
 
@@ -117,7 +117,7 @@ public static class MsBulkExtensions
         // Generate & execute
         MsQueryGenerator gen = new();
         (string query, DynamicParameters parameters) = gen.GenerateBulkUpdate(
-            tableName, rowObjects, selectorColumns, columnsToUpdate, calculatedProperties, useTransaction);
+            DatabaseType.SqlServer, tableName, rowObjects, selectorColumns, columnsToUpdate, calculatedProperties, useTransaction);
         return conn.ExecuteAsync(query, parameters);
     }
 }

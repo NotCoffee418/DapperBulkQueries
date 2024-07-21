@@ -1,5 +1,7 @@
 ﻿
 
+using System.Data;
+
 namespace DapperBulkQueries.Tests;
 
 public class QueryGeneratorTests
@@ -14,7 +16,7 @@ public class QueryGeneratorTests
 
         // Insert using the extension method
         QueryGeneratorBase gen = new PgQueryGenerator();
-        var insertData = gen.GenerateBulkInsert("TestTable", sampleData, properties, batchSize: 2);
+        var insertData = gen.GenerateBulkInsert(DatabaseType.None, "TestTable", sampleData, properties, batchSize: 2);
 
         // Validate that there are 2 batches for our 3 entries with batch size of 2
         Assert.Equal(2, insertData.Count());

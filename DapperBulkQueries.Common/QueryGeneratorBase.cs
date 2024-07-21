@@ -1,4 +1,6 @@
-﻿namespace DapperBulkQueries.Common;
+﻿using DapperBulkQueries.Common.Internal;
+
+namespace DapperBulkQueries.Common;
 
 public abstract class QueryGeneratorBase
 {
@@ -24,15 +26,15 @@ public abstract class QueryGeneratorBase
     
 
     public virtual List<(string Query, DynamicParameters Parameters)> GenerateBulkInsert<T>(
-    string tableName,
-    List<T> rowObjects,
-    List<string> columnNames,
-    Dictionary<string, Func<T, object>> calculatedProperties = null,
-    uint batchSize = 100, 
-    string paramPrefix = "",
-    bool ignoreConflict = false;
-    )
-    where T : class
+        DatabaseType dbType,
+        string tableName,
+        List<T> rowObjects,
+        List<string> columnNames,
+        Dictionary<string, Func<T, object>>? calculatedProperties = null,
+        uint batchSize = 100, 
+        string paramPrefix = "",
+        OnConflict onConflict = OnConflict.Error)
+        where T : class
     {
         // Preparation
         List<(string Query, DynamicParameters Parameters)> result = new();
@@ -51,7 +53,8 @@ public abstract class QueryGeneratorBase
             // Handle plain properties
             foreach (var propertyName in columnNames)
             {
-                object value = GetPropertyValue(propertyName, rowObjects[i], calculatedProperties);
+                object value = GetPropertyValue(propertyName, rowObjects[i], calculatedProperties 
+                    ?? throw new Exception("CalculatedPropterties was null."));
                 parameters.Add($"@{paramPrefix}{propertyName}_{i}", value);
                 sqlBuilder.Append($"@{paramPrefix}{propertyName}_{i},");
             }
@@ -64,6 +67,8 @@ public abstract class QueryGeneratorBase
             {
                 // Remove trailing comma, add ; & execute
                 sqlBuilder.Remove(sqlBuilder.Length - 1, 1);
+                if (dbType == DatabaseType.Npgsql && onConflict == OnConflict.DoNothing)
+                    sqlBuilder.Append(" ON CONFLICT DO NOTHING");
                 sqlBuilder.Append(';');
                 result.Add((sqlBuilder.ToString(), parameters));
 
@@ -74,14 +79,17 @@ public abstract class QueryGeneratorBase
                 parameters = new DynamicParameters();
             }
         }
-        if (ignoreConflict) sqlBase += "ON CONFLICT DO NOTHING"
         
         return result;
     }
 
 
     public virtual (string Query, DynamicParameters Parameters) GenerateBulkDelete<T>(
-        string tableName, string selectorColumnName, List<T> selectorValues, string paramPrefix = "")
+        DatabaseType dbType, 
+        string tableName, 
+        string selectorColumnName, 
+        List<T> selectorValues, 
+        string paramPrefix = "")
     {
         // Generate parameters
         var parameters = new DynamicParameters();
@@ -99,6 +107,7 @@ public abstract class QueryGeneratorBase
     }
 
     public virtual (string Query, DynamicParameters Parameters) GenerateBulkUpdate<T>(
+        DatabaseType dbType,
         string tableName,
         List<T> rowObjects, 
         List<string> selectorColumnNames, 

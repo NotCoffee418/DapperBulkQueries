@@ -115,6 +115,37 @@ public class PostgresTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteBulkInsertAsync_InsertDoNothingOnConflict()
+    {
+        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+
+        // Define properties to use
+        List<string> properties = new() { "TextCol", "NumberCol", "BoolCol" };
+
+        // Insert using the extension method
+        await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, properties, batchSize: 2, onConflict: OnConflict.DoNothing);
+
+        // Insert everything again
+        await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, properties, batchSize: 2, onConflict: OnConflict.DoNothing);
+
+        // Retrieve the inserted data
+        var insertedData = await conn.QueryAsync<TestTable>(
+            "SELECT * FROM TestTable ORDER BY Id");
+
+        // Validate that the data matches
+        Assert.Equal(sampleData.Count, insertedData.Count());
+        for (int i = 0; i < sampleData.Count; i++)
+        {
+            Assert.Equal(sampleData[i].TextCol, insertedData.ElementAt(i).TextCol);
+            Assert.Equal(sampleData[i].NumberCol, insertedData.ElementAt(i).NumberCol);
+            Assert.Equal(sampleData[i].BoolCol, insertedData.ElementAt(i).BoolCol);
+        }
+    }
+
+    [Fact]
     public async Task ExecuteBulkDeleteAsync_ExpectRowsGone()
     {
         using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
@@ -224,6 +255,7 @@ public class PostgresTests : IDisposable
         // Insert data
         PgQueryGenerator gen = new PgQueryGenerator();
         var generatedInsert = gen.GenerateBulkInsert(
+            DatabaseType.Npgsql,
             "TestTable",
             sampleData,
             new() { "TextCol", "NumberCol", "BoolCol" },
@@ -237,6 +269,7 @@ public class PostgresTests : IDisposable
             new TestTable() { Id = 2, TextCol = "Updated second", NumberCol = 6, BoolCol = false }
         };
         var generatedUpdate = gen.GenerateBulkUpdate(
+            DatabaseType.Npgsql,
             "TestTable",
             updateData,
             new List<string>() { "Id", "BoolCol" }, // Update where ID AND BoolCol match
@@ -246,6 +279,7 @@ public class PostgresTests : IDisposable
 
         // Delete Data
         var generatedDelete = gen.GenerateBulkDelete(
+            DatabaseType.Npgsql,
             "TestTable", 
             "TextCol", 
             new List<string>() { "aaa", "ccc" },

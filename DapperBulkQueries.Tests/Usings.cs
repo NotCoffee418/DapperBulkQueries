@@ -7,3 +7,4 @@ global using DapperBulkQueries.Npgsql;
 global using DapperBulkQueries.SqlServer;
 global using DapperBulkQueries.Tests.Helpers;
 global using DapperBulkQueries.Common;
+global using DapperBulkQueries.Common.Internal;
