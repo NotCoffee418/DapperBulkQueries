@@ -12,7 +12,7 @@ public static class ConnectionHelper
 
     internal static async Task<SqlConnection> GetOpenSqlServerConnectionAsync()
     {
-        var connectionString = "Server=127.0.0.1,9016;User Id=SA;Password=tester123954;Database=Master;TrustServerCertificate=True";
+        var connectionString = "Server=127.0.0.1,9016;User Id=SA;Password=Tester!12345;Database=Master;TrustServerCertificate=True";
         var conn = new SqlConnection(connectionString);
         await conn.OpenAsync();
         return conn;

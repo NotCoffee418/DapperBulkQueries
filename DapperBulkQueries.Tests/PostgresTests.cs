@@ -118,10 +118,10 @@ public class PostgresTests : IDisposable
     public async Task ExecuteBulkInsertAsync_InsertDoNothingOnConflict()
     {
         using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
-        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithId1();
 
         // Define properties to use
-        List<string> properties = new() { "TextCol", "NumberCol", "BoolCol" };
+        List<string> properties = new() { "Id", "TextCol", "NumberCol", "BoolCol" };
 
         // Insert using the extension method
         await conn.ExecuteBulkInsertAsync(
@@ -139,6 +139,43 @@ public class PostgresTests : IDisposable
         Assert.Equal(sampleData.Count, insertedData.Count());
         for (int i = 0; i < sampleData.Count; i++)
         {
+            Assert.Equal(sampleData[i].Id, insertedData.ElementAt(i).Id);
+            Assert.Equal(sampleData[i].TextCol, insertedData.ElementAt(i).TextCol);
+            Assert.Equal(sampleData[i].NumberCol, insertedData.ElementAt(i).NumberCol);
+            Assert.Equal(sampleData[i].BoolCol, insertedData.ElementAt(i).BoolCol);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteBulkInsertAsync_InserExpectErrorOnConflict()
+    {
+        using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        List<TestTable> sampleData = SampleDataHelper.GetSampleTestTablesWithId1();
+
+        // Define properties to use
+        List<string> properties = new() { "Id", "TextCol", "NumberCol", "BoolCol" };
+
+        // Insert using the extension method
+        await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, properties, batchSize: 2, onConflict: OnConflict.DoNothing);
+
+        // Insert again and expect error
+        var exception = await Assert.ThrowsAsync<PostgresException>(async () =>
+        {
+            await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, properties, batchSize: 2, onConflict: OnConflict.Error);
+        });
+        Assert.Equal("23505", exception.SqlState);
+
+        // Retrieve the inserted data
+        var insertedData = await conn.QueryAsync<TestTable>(
+            "SELECT * FROM TestTable ORDER BY Id");
+
+        // Validate that the data matches
+        Assert.Equal(sampleData.Count, insertedData.Count());
+        for (int i = 0; i < sampleData.Count; i++)
+        {
+            Assert.Equal(sampleData[i].Id, insertedData.ElementAt(i).Id);
             Assert.Equal(sampleData[i].TextCol, insertedData.ElementAt(i).TextCol);
             Assert.Equal(sampleData[i].NumberCol, insertedData.ElementAt(i).NumberCol);
             Assert.Equal(sampleData[i].BoolCol, insertedData.ElementAt(i).BoolCol);

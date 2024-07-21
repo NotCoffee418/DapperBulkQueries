@@ -16,7 +16,7 @@ services:
     container_name: DapperBulkQueries.SqlServer
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
-      SA_PASSWORD: "tester123954"
+      SA_PASSWORD: "Tester!12345"
       ACCEPT_EULA: "Y"
     ports:
     - "127.0.0.1:9016:1433"

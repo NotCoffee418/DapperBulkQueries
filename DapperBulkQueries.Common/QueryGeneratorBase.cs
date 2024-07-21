@@ -53,8 +53,7 @@ public abstract class QueryGeneratorBase
             // Handle plain properties
             foreach (var propertyName in columnNames)
             {
-                object value = GetPropertyValue(propertyName, rowObjects[i], calculatedProperties 
-                    ?? throw new Exception("CalculatedPropterties was null."));
+                object value = GetPropertyValue(propertyName, rowObjects[i], calculatedProperties);
                 parameters.Add($"@{paramPrefix}{propertyName}_{i}", value);
                 sqlBuilder.Append($"@{paramPrefix}{propertyName}_{i},");
             }
@@ -177,7 +176,7 @@ public abstract class QueryGeneratorBase
     protected object GetPropertyValue<T>(
         string propertyName,
         T item,
-        Dictionary<string, Func<T, object>> calculatedProperties)
+        Dictionary<string, Func<T, object>>? calculatedProperties)
     {
         // Extract value from calculated property
         if (calculatedProperties is not null && calculatedProperties.ContainsKey(propertyName))
