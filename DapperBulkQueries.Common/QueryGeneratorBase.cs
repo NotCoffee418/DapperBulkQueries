@@ -29,7 +29,9 @@ public abstract class QueryGeneratorBase
     List<string> columnNames,
     Dictionary<string, Func<T, object>> calculatedProperties = null,
     uint batchSize = 100, 
-    string paramPrefix = "")
+    string paramPrefix = "",
+    bool ignoreConflict = false;
+    )
     where T : class
     {
         // Preparation
@@ -72,6 +74,8 @@ public abstract class QueryGeneratorBase
                 parameters = new DynamicParameters();
             }
         }
+        if (ignoreConflict) sqlBase += "ON CONFLICT DO NOTHING"
+        
         return result;
     }
 
