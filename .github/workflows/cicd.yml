@@ -26,8 +26,15 @@ jobs:
         run: docker-compose up -d
       - name: Test
         run: dotnet test --no-restore --verbosity normal
-
+        
+      - name: Pack DapperBulkQueries.Common
+        run: dotnet pack --no-build --configuration Release DapperBulkQueries.Common/DapperBulkQueries.Common.csproj --output .
+        
       - name: Pack DapperBulkQueries.Npgsql
         run: dotnet pack --no-build --configuration Release DapperBulkQueries.Npgsql/DapperBulkQueries.Npgsql.csproj --output .
+        
+      - name: Pack DapperBulkQueries.SqlServer
+        run: dotnet pack --no-build --configuration Release DapperBulkQueries.SqlServer/DapperBulkQueries.SqlServer.csproj --output .
+        
       - name: Publish to NuGet
         run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
