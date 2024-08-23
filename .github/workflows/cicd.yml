@@ -23,7 +23,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore
 
       - name: Set up test environment
-        run: docker-compose up -d
+        run: docker compose up -d
       - name: Test
         run: dotnet test --no-restore --verbosity normal
         
