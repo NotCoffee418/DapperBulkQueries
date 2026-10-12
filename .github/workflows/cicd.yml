@@ -6,14 +6,20 @@ on:
   pull_request:
     branches: [main]
 
+permissions: {}
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Setup .NET
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 6.0.x
 
@@ -26,15 +32,38 @@ jobs:
         run: docker compose up -d
       - name: Test
         run: dotnet test --no-restore --verbosity normal
-        
-      - name: Pack DapperBulkQueries.Common
-        run: dotnet pack --no-build --configuration Release DapperBulkQueries.Common/DapperBulkQueries.Common.csproj --output .
-        
-      - name: Pack DapperBulkQueries.Npgsql
-        run: dotnet pack --no-build --configuration Release DapperBulkQueries.Npgsql/DapperBulkQueries.Npgsql.csproj --output .
-        
-      - name: Pack DapperBulkQueries.SqlServer
-        run: dotnet pack --no-build --configuration Release DapperBulkQueries.SqlServer/DapperBulkQueries.SqlServer.csproj --output .
-        
+
+      - name: Pack
+        run: |
+          dotnet pack --no-build --configuration Release DapperBulkQueries.Common/DapperBulkQueries.Common.csproj --output ./nupkgs
+          dotnet pack --no-build --configuration Release DapperBulkQueries.Npgsql/DapperBulkQueries.Npgsql.csproj --output ./nupkgs
+          dotnet pack --no-build --configuration Release DapperBulkQueries.SqlServer/DapperBulkQueries.SqlServer.csproj --output ./nupkgs
+
+      - name: Upload packages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkgs
+          path: nupkgs/*.nupkg
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Only this job can see the NuGet key. Store it as an environment secret on
+    # the "nuget" environment and restrict that environment to the main branch.
+    environment: nuget
+    permissions: {}
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          name: nupkgs
+          path: nupkgs
+
       - name: Publish to NuGet
-        run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push "nupkgs/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "$NUGET_API_KEY" --skip-duplicate
