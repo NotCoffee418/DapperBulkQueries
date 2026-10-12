@@ -148,7 +148,7 @@ public abstract class QueryGeneratorBase
             sqlBuilder.AppendLine($" WHERE {string.Join(" AND ", selectorColumnNames.Select(p => $"{p} = @{paramPrefix}{p}_{i}"))};");
             foreach (var propertyName in selectorColumnNames)
             {
-                var value = rowObjects[i].GetType().GetProperty(propertyName).GetValue(rowObjects[i]);
+                var value = GetPropertyValue(propertyName, rowObjects[i], calculatedProperties);
                 parameters.Add($"@{paramPrefix}{propertyName}_{i}", value);
             }
         }

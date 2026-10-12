@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using DapperBulkQueries.Tests.Models;
 
 namespace DapperBulkQueries.Tests;
 
@@ -277,6 +278,52 @@ public class PostgresTests : IDisposable
         Assert.Equal(3, changedRows?.Count());
         Assert.Equal("Updated first", changedRows[0].TextCol);
         Assert.Equal("Updated second", changedRows?[1].TextCol);
+        Assert.Equal(5, changedRows[0].NumberCol);
+        Assert.Equal(6, changedRows[1].NumberCol);
+        Assert.True(changedRows[2].IsPropertiesMatch(sampleData[2]),
+            "Rows were updated but another row changed too");
+    }
+
+    [Fact]
+    public async Task ExecuteBulkUpdateAsync_ExpectRowsChanged_MapColumns()
+    {
+        await using var conn = await ConnectionHelper.GetOpenNpgsqlConnectionAsync();
+        var sampleData = SampleDataHelper.GetSampleTestTablesWithoutId1();
+
+        // Insert data
+        await conn.ExecuteBulkInsertAsync(
+            "TestTable", sampleData, ["TextCol", "NumberCol", "BoolCol"]);
+
+        var updateData = new List<TestTableToMap>()
+        {
+            new () { ElementId = 1, ElementText = "Updated first", ElementNumber = 5, ElementBool = true },
+            new () { ElementId = 2, ElementText = "Updated second", ElementNumber = 6, ElementBool = false }
+        };
+
+        var propertyMap = new Dictionary<string, Func<TestTableToMap, object>>()
+        {
+            { "Id", (entity) => entity.ElementId },
+            { "BoolCol", (entity) => entity.ElementBool },
+            { "TextCol", (entity) => entity.ElementText },
+            { "NumberCol", (entity) => entity.ElementNumber },
+        };
+
+        await conn.ExecuteBulkUpdateAsync(
+            "TestTable",
+            updateData,
+            ["Id", "BoolCol"], // Update where ID AND BoolCol match
+            ["TextCol", "NumberCol"],  // Properties to update
+            calculatedProperties: propertyMap,
+            useTransaction: false);
+
+        // Retrieve the data in its current form
+        var changedRows = (await conn.QueryAsync<TestTable>("SELECT * FROM TestTable ORDER BY Id")).ToList();
+
+        // Validate
+        Assert.NotNull(changedRows);
+        Assert.Equal(3, changedRows.Count);
+        Assert.Equal("Updated first", changedRows[0].TextCol);
+        Assert.Equal("Updated second", changedRows[1].TextCol);
         Assert.Equal(5, changedRows[0].NumberCol);
         Assert.Equal(6, changedRows[1].NumberCol);
         Assert.True(changedRows[2].IsPropertiesMatch(sampleData[2]),
